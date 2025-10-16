@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+<test1.Pages.Components.Spinner ShowSpinner=showSpinner />
 <div class="page dark">
     <div class="sidebar">
         <NavMenu />
@@ -24,3 +25,11 @@
         background-color: #121213 !important;
     }
 </style>
+@code{
+    private bool showSpinner = false;
+    public async Task ToggleSpinner(bool show)
+    {
+        showSpinner = show;
+        StateHasChanged();
+    }
+}

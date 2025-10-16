@@ -1,0 +1,32 @@
+﻿@if (ShowSpinner)
+{
+	<div class="overlay">
+		<div class="spinner"/>
+	</div>
+}
+<style>
+	.overlay{
+		position: fixed; /* Positions the element relative to the viewport */
+		top: 0; /* Aligns the element to the top of the viewport */
+		left: 0; /* Aligns the element to the left of the viewport */
+		width: 100vw; /* Sets the width to 100% of the viewport width */
+		height: 100vh; /* Sets the height to 100% of the viewport height */
+		z-index: 9999; /* Ensures the element is on top of other content */
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+	.spinner {
+		border: 8px solid #f3f3f3; /* Light grey */
+		border-top: 8px solid #3498db; /* Blue */
+		border-radius: 50%;
+		width: 60px;
+		height: 60px;
+		animation: spin 2s linear infinite;
+		margin: auto;
+	}
+</style>
+
+@code {
+	[Parameter]
+	public bool ShowSpinner { get; set; } = false;
+
+}

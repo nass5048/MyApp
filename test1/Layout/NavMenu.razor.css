@@ -3,12 +3,25 @@
 }
 
 .top-row {
-    height: 3.5rem;
+    height: 12.5rem;
     background-color: rgba(0,0,0,0.4);
+}
+
+.avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+    background: #ddd;
+    margin: 0 auto;
 }
 
 .navbar-brand {
     font-size: 1.1rem;
+    text-align: center;
+    flex: auto;
 }
 
 .bi {
