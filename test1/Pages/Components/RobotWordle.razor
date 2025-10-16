@@ -83,10 +83,10 @@
 
     private Dictionary<string, PlayerKeyboard.KeyState> KeyStates { get; set; } = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         StartNewGame();
-        AutoSolve();
+        await AutoSolve();
         stats.robotCount = Guesses.Count(p => p != null);
     }
     private string IsHidden()

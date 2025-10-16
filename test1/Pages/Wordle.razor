@@ -4,6 +4,7 @@
 @using test1.Pages.Components;
 @using test1.Wordle.Classes;
 @inject Stats stats
+@inject test1.Services.SpinnerService SpinnerService
 
 <PageTitle>Wordle</PageTitle>
 
@@ -21,13 +22,15 @@
 	{
 		try
 		{
+			
+			SpinnerService.Show();
 			var date = DateTime.Today.ToString("yyyy-MM-dd");
 			string target = $"https://www.nytimes.com/svc/wordle/v2/{date}.json";
 			// Dev/testing proxy - returns raw content. DO NOT use this proxy in production.
 			string proxyPrefix = "https://api.allorigins.win/raw?url=";
 			using var client = new System.Net.Http.HttpClient();
 			string posts = await client.GetStringAsync(proxyPrefix + Uri.EscapeDataString(target));
-
+			
 			using JsonDocument document = JsonDocument.Parse(posts);
 			JsonElement root = document.RootElement;
 			string solution = "";
@@ -41,8 +44,9 @@
 		{
 			Console.Error.WriteLine(ex);
 		}
+	
 		await stats.LoadAsync();
-		await base.OnInitializedAsync();
+		SpinnerService.Hide();
 	}
 
 	public void completeDaily()

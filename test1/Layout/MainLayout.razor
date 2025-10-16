@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
-<test1.Pages.Components.Spinner ShowSpinner=showSpinner />
+@inject test1.Services.SpinnerService SpinnerService
+
+<test1.Pages.Components.Spinner ShowSpinner="showSpinner" />
 <div class="page dark">
     <div class="sidebar">
         <NavMenu />
@@ -27,9 +29,31 @@
 </style>
 @code{
     private bool showSpinner = false;
-    public async Task ToggleSpinner(bool show)
+
+    protected override void OnInitialized()
     {
-        showSpinner = show;
-        StateHasChanged();
+        // initialize state and subscribe to changes
+        showSpinner = SpinnerService.IsShowing;
+        SpinnerService.OnChange += SpinnerChanged;
+    }
+
+    private void SpinnerChanged(bool showing)
+    {
+        showSpinner = showing;
+        // ensure update on UI thread
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Backwards-compatible method (keeps your existing callers working)
+    public Task ToggleSpinner(bool show)
+    {
+        SpinnerService.Toggle(show);
+        return Task.CompletedTask;
+    }
+
+    // Unsubscribe to avoid memory leaks
+    public void Dispose()
+    {
+        SpinnerService.OnChange -= SpinnerChanged;
     }
 }
