@@ -6,6 +6,9 @@
     height: 100vh; /* Sets the height to 100% of the viewport height */
     z-index: 9999; /* Ensures the element is on top of other content */
     background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center; /* Centers vertically */
 }
 
 .spinner {
@@ -16,6 +19,7 @@
     height: 60px;
     animation: spin 2s linear infinite;
     margin: auto;
+    
 }
 @keyframes spin {
     0% {
