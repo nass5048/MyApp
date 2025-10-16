@@ -1,0 +1,40 @@
+﻿
+	<div class="wordle-square" style="background-color:@GetColor()">
+		<div class="letter">@Letter</div>
+	</div>
+
+<style>
+	.letter{
+		color: white;
+		font-size: xx-large;
+	}
+
+	.wordle-square {
+		text-align: center;
+		width: 50px;
+		height: 50px;
+		display: inline-flex;
+		justify-content: center;
+	}
+
+</style>
+
+@code {
+	[Parameter]
+	public char Letter { get; set; }
+
+	[Parameter]
+	public WordleGuesser.Classes.ResponseColor Color { get; set; }
+
+	private string GetColor()
+	{
+		return Color switch
+		{
+			WordleGuesser.Classes.ResponseColor.green => "green",
+			WordleGuesser.Classes.ResponseColor.yellow => "goldenrod",
+			WordleGuesser.Classes.ResponseColor.grey => "grey",
+			_ => "black",
+		};
+	}
+
+}

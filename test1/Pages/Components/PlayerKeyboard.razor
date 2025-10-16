@@ -1,0 +1,167 @@
+﻿@using System.Collections.Immutable
+@using Microsoft.AspNetCore.Components
+
+<div class="keyboard" role="group" aria-label="Keyboard">
+    @foreach (var row in KeyRows)
+    {
+        <div class="keyboard-row">
+            @foreach (var keyValue in row)
+            {
+                if (keyValue == "spacer")
+                {
+                    <div class="key-spacer"></div>
+                    continue;
+                }
+
+                var disabled = DisabledKeySet.Contains(keyValue);
+                <button type="button"
+                        data-key="@keyValue"
+                        aria-label="@GetAriaLabel(keyValue)"
+                        aria-disabled="@disabled.ToString().ToLower()"
+                        class="@GetKeyClasses(keyValue)"
+                        @onclick="() => OnButtonClick(keyValue)"
+                        disabled="@disabled">
+                    @if (keyValue == KeyBackspace)
+                    {
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" class="game-icon" data-testid="icon-backspace">
+                            <path fill="var(--color-tone-1)" d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H7.07L2.4 12l4.66-7H22v14zm-11.59-2L14 13.41 17.59 17 19 15.59 15.41 12 19 8.41 17.59 7 14 10.59 10.41 7 9 8.41 12.59 12 9 15.59z"></path>
+                        </svg>
+                    }
+                    else if (keyValue == KeyEnter)
+                    {
+                        <span>enter</span>
+                    }
+                    else
+                    {
+                        @keyValue
+                    }
+                </button>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .keyboard { margin: 0 var(--horizontal-spacing-1); user-select: none; }
+    .keyboard-row { display:flex; justify-content:center; gap:8px; margin: 6px 0; }
+    .key-spacer { width: 36px; }
+    button.key {
+        min-width: 40px;
+        height: 58px;
+        border-radius: 6px;
+        border: 0;
+        padding: 0 10px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--key-text-color);
+        background: var(--key-bg);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .12s ease, transform .06s ease;
+    }
+    button.key:active { transform: translateY(1px); }
+    button.key.correct {
+        background: green;
+        color: var(--key-evaluated-text-color);
+    }
+    button.key.present {
+        background: yellow;
+        color: var(--key-evaluated-text-color);
+    }
+    button.key.absent {
+        background: grey;
+        color: var(--key-evaluated-text-color-absent);
+    }
+    button.key.disabled, button.key[disabled] {
+        opacity: .6;
+        cursor: default;
+    }
+    /* size variants */
+    .key.one-and-a-half { min-width: 92px; }
+</style>
+
+@code {
+    // Use explicit tokens for Enter/Backspace so UI clicks send the same values the host expects
+    private const string KeyEnter = "Enter";
+    private const string KeyBackspace = "Backspace";
+
+    // Public API: parent supplies a mapping of keys to KeyState
+    [Parameter]
+    public IReadOnlyDictionary<string, KeyState>? KeyStates { get; set; }
+
+    // Optional: keys that should be disabled (e.g., enter/backspace)
+    [Parameter]
+    public IReadOnlyCollection<string>? DisabledKeys { get; set; }
+
+    // Emit the key that was pressed
+    [Parameter]
+    public EventCallback<string> OnKeyPressed { get; set; }
+
+    // Default empty collections to avoid null checks in rendering
+    private IReadOnlyDictionary<string, KeyState> _keyStates => KeyStates ?? ImmutableDictionary<string, KeyState>.Empty;
+    private IReadOnlyCollection<string> _disabledKeys => DisabledKeys ?? ImmutableList<string>.Empty;
+
+    // Expose these for use in markup
+    private IReadOnlyDictionary<string, KeyState> KeyStateMap => _keyStates;
+
+    // Use a private non-conflicting name for template usage to avoid duplicate-member errors
+    private IReadOnlyCollection<string> DisabledKeySet => _disabledKeys;
+
+    // Rows definition; values are the logical key values (letters + Enter/Backspace)
+    private static readonly string[][] KeyRows = new[]
+    {
+        new[] { "q","w","e","r","t","y","u","i","o","p" },
+        new[] { "spacer","a","s","d","f","g","h","j","k","l","spacer" },
+        new[] { KeyEnter,"z","x","c","v","b","n","m", KeyBackspace }
+    };
+
+    private string GetAriaLabel(string key)
+        => key switch
+        {
+            KeyEnter => "enter",
+            KeyBackspace => "backspace",
+            _ => $"press {key}"
+        };
+
+    private string GetKeyClasses(string key)
+    {
+        var state = GetKeyState(key);
+        var classes = new List<string> { "key" };
+
+        if (state == KeyState.Correct) classes.Add("correct");
+        else if (state == KeyState.Present) classes.Add("present");
+        else if (state == KeyState.Absent) classes.Add("absent");
+
+        if (key == KeyEnter || key == KeyBackspace) classes.Add("one-and-a-half");
+        if (DisabledKeySet.Contains(key)) classes.Add("disabled");
+
+        return string.Join(" ", classes);
+    }
+
+    private KeyState GetKeyState(string key)
+    {
+        if (KeyStateMap.TryGetValue(key, out var s)) return s;
+        // also check lowercase/uppercase variants (letters)
+        if (KeyStateMap.TryGetValue(key.ToLowerInvariant(), out s)) return s;
+        if (KeyStateMap.TryGetValue(key.ToUpperInvariant(), out s)) return s;
+        return KeyState.Default;
+    }
+
+    private async Task OnButtonClick(string key)
+    {
+        if (DisabledKeySet.Contains(key)) return;
+        if (OnKeyPressed.HasDelegate)
+        {
+            await OnKeyPressed.InvokeAsync(key);
+        }
+    }
+
+    public enum KeyState
+    {
+        Default = 0,
+        Absent = 1,
+        Present = 2,
+        Correct = 3
+    }
+}

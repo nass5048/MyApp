@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+<div class="page dark">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 dark-top">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<style>
+    .dark{
+        background-color: #272729;
+		color: white;
+    }
+    .dark-top {
+        background-color: #121213 !important;
+    }
+</style>

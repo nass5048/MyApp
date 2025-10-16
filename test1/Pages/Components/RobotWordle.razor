@@ -1,0 +1,190 @@
+﻿@using System.Collections.Generic
+@using WordleGuesser
+@using WordleGuesser.Classes
+@using test1.Pages.Components
+@using Microsoft.AspNetCore.Components.Web
+@using test1.Wordle.Classes;
+@inject Stats stats
+
+<div class="@IsHidden()" style=" padding:8px; background:#f3f3f3; border-radius:6px;">
+    @for (int r = 0; r < 6; r++)
+    {
+        <div class="row">
+            @for (int c = 0; c < 5; c++)
+            {
+                var ch = GetCellChar(r, c);
+                var color = GetCellColor(r, c);
+                <div class="tile @GetTileClass(color)">
+                    @ch
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .hide{
+		display: none;
+    }
+    .unhide{
+        display: contents;
+    }
+    .row {
+        display: flex;
+        gap: 6px;
+        margin: 6px 0;
+        justify-content: center;
+    }
+    .tile {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 20px;
+        border-radius: 6px;
+        background: var(--extra-light-gray, #e9e9e9);
+        color: var(--wordleBlack, #212121);
+        border: 2px solid rgba(0,0,0,0.06);
+        text-transform: uppercase;
+    }
+
+        .tile.correct {
+            background: #6aaa64;
+            color: white;
+        }
+
+        .tile.present {
+            background: #c9b458;
+            color: white;
+        }
+
+        .tile.grey {
+            background: #787c7e;
+            color: white;
+        }
+</style>
+
+
+@code {
+    private ElementReference ContainerRef;
+    private bool _shouldFocus;
+
+    [Parameter]
+    public string Solution { get; set; }
+    [Parameter]
+    public bool Hide { get; set; }
+
+    private int CurrentRow { get; set; } = 0;
+    private string CurrentGuess { get; set; } = "";
+    private List<WordGuessResponse?> Guesses { get; set; } = new();
+    private string StatusMessage { get; set; } = "";
+
+    private Dictionary<string, PlayerKeyboard.KeyState> KeyStates { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        StartNewGame();
+        AutoSolve();
+        stats.robotCount = Guesses.Count(p => p != null);
+    }
+    private string IsHidden()
+    {
+        if (Hide)
+            return "hide";
+
+        return "unhide";
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldFocus)
+        {
+            _shouldFocus = false;
+            try { await ContainerRef.FocusAsync(); }
+            catch { }
+        }
+    }
+
+    private void StartNewGame()
+    {
+        Solution = (Solution ?? "").Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(Solution) || Solution.Length != 5)
+        {
+            StatusMessage = "Enter a 5-letter solution first.";
+            return;
+        }
+
+        CurrentRow = 0;
+        CurrentGuess = "";
+        StatusMessage = "";
+        Guesses = Enumerable.Repeat<WordGuessResponse?>(null, 6).ToList();
+
+        KeyStates = "abcdefghijklmnopqrstuvwxyz".ToDictionary(c => c.ToString(), c => PlayerKeyboard.KeyState.Default);
+        _shouldFocus = true;
+    }
+
+
+
+    private bool IsGameOver() => CurrentRow >= 6;
+
+    private char GetCellChar(int row, int col)
+    {
+        if (Guesses[row] != null)
+            return char.ToUpperInvariant(Guesses[row]!.Word[col]);
+        else if (row == CurrentRow && col < CurrentGuess.Length)
+            return char.ToUpperInvariant(CurrentGuess[col]);
+        return ' ';
+    }
+
+    private ResponseColor? GetCellColor(int row, int col)
+    {
+        return Guesses[row]?.Colors[col];
+    }
+
+    private string GetTileClass(ResponseColor? color)
+    {
+        return color switch
+        {
+            ResponseColor.green => "correct",
+            ResponseColor.yellow => "present",
+            ResponseColor.grey => "grey",
+            _ => ""
+        };
+    }
+
+
+    private async Task AutoSolve()
+    {
+        if (string.IsNullOrWhiteSpace(Solution) || Solution.Length != 5)
+        {
+            StatusMessage = "Enter a 5-letter solution first.";
+            return;
+        }
+
+        try
+        {
+            var g = new Guesser(Solution);
+            var guesses = g.FailedGuesses ?? new List<WordGuessResponse>();
+
+            StartNewGame();
+            int i = 0;
+            foreach (var guess in guesses)
+            {
+                if (i >= 6) break;
+                Guesses[i] = guess;
+                i++;
+            }
+
+            CurrentRow = Math.Min(6, guesses.Count);
+            if (i > 0 && Guesses.Any(g => g?.Word.Equals(Solution, StringComparison.OrdinalIgnoreCase) == true))
+                StatusMessage = $"Guesser solved in {i} steps.";
+            else
+                StatusMessage = $"Guesser produced {i} guess(es).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "AutoSolve failed: " + ex.Message;
+        }
+    }
+}
