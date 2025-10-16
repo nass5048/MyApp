@@ -1,0 +1,57 @@
+﻿@using test1.Wordle.Classes;
+@inject Stats stats
+<div class="stats">
+    <table>
+        <tbody>
+            <tr>
+                <td>Current Streak</td>
+                <td>@stats.CurrentStreak</td>
+            </tr>
+            <tr>
+                <td>Max Daily streak</td>
+                <td>@stats.MaxStreak</td>
+            </tr>
+            <tr>
+                <td>Games completed</td>
+                <td>@stats.GamesWon</td>
+            </tr>
+            <tr>
+                <td>Games Played</td>
+                <td>@stats.GamesPlayed</td>
+            </tr>
+            <tr>
+                <td>Last Played</td>
+                <td>@stats.LastPlayed</td>
+            </tr>
+            <tr>
+                <td>Wins against robot</td>
+                <td>@stats.RobotWins</td>
+            </tr>
+            <tr>
+                <td>Losses to robot</td>
+                <td>@stats.RobotLosses</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse; /* Collapses borders into a single line */
+    }
+
+    th, td {
+        padding: 8px; /* Adds space inside cells */
+        text-align: left; /* Aligns text to the left within cells */
+    }
+    .stats{
+        width: 400px;
+    }
+</style>
+@code {
+    protected override Task OnInitializedAsync()
+    {
+        stats.LoadAsync();
+        return base.OnInitializedAsync();
+    }
+}
