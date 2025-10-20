@@ -1,0 +1,34 @@
+name: Fetch NYT Wordle Answer
+
+on:
+  schedule:
+    - cron: "5 0 * * *"  # Runs daily at 00:05 UTC
+  workflow_dispatch:      # Allows manual manual run
+
+jobs:
+  update-wordle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Fetch NYT Wordle JSON
+        run: |
+          TODAY=$(date +'%Y-%m-%d')
+          URL="https://www.nytimes.com/svc/wordle/v2/$TODAY.json"
+          RAW_JSON=$(curl -s "$URL")
+          SOLUTION=$(echo "$RAW_JSON" | jq -r '.solution')
+          echo "{ \"solution\": \"$SOLUTION\" }" > test1/wwwroot/daily-word.json
+
+      - name: Commit & Push if Changed
+        run: |
+          git config user.name "Wordle Bot"
+          git config user.email "actions@github.com"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add test1/wwwroot/daily-word.json
+            git commit -m "Update Wordle solution for $TODAY"
+            git push
+          else
+            echo "No changes to commit."
+          fi
