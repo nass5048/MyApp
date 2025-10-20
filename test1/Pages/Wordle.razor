@@ -5,6 +5,7 @@
 @using test1.Wordle.Classes;
 @inject Stats stats
 @inject test1.Services.SpinnerService SpinnerService
+@inject HttpClient Http
 
 <PageTitle>Wordle</PageTitle>
 
@@ -12,41 +13,37 @@
 {
 	<WordleKeyboardHost Solution=@correctWord OnGameCompleted="completeDaily"/>
 
-	<RobotWordle Solution=@correctWord Hide=@HideRobot/>
+	<RobotWordle Solution=@correctWord Hide=@HideRobot/> 
 }
 @code {
 	string? correctWord{ get;set; }
+	WordResponse? dailyWord { get; set; }
 
 	bool HideRobot { get; set; } = true;
 	override protected async Task OnInitializedAsync()
 	{
 		try
 		{
-			
+
 			SpinnerService.Show();
+
+			dailyWord = await Http.GetFromJsonAsync<WordResponse>("daily-word.json");
 			var date = DateTime.Today.ToString("yyyy-MM-dd");
-			string target = $"https://www.nytimes.com/svc/wordle/v2/{date}.json";
-			// Dev/testing proxy - returns raw content. DO NOT use this proxy in production.
-			string proxyPrefix = "https://api.allorigins.win/raw?url=";
-			using var client = new System.Net.Http.HttpClient();
-			string posts = await client.GetStringAsync(proxyPrefix + Uri.EscapeDataString(target));
-			
-			using JsonDocument document = JsonDocument.Parse(posts);
-			JsonElement root = document.RootElement;
-			string solution = "";
-			if (root.TryGetProperty("solution", out JsonElement nameElement))
-			{
-				solution = nameElement.GetString();
-				correctWord = solution;
-			}
+
+			correctWord = dailyWord.Solution;
 		}
 		catch (Exception ex)
 		{
 			Console.Error.WriteLine(ex);
 		}
-	
+
 		await stats.LoadAsync();
 		SpinnerService.Hide();
+	}
+
+	public class WordResponse
+	{
+		public string Solution { get; set; }
 	}
 
 	public void completeDaily()
