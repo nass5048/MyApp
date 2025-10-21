@@ -7,7 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="WordleWords.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="WordleWords.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\WordleWords.txt" />
   </ItemGroup>
 
   <ItemGroup>

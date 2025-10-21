@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing.Design;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using WordleGuesser.Classes;
 
 namespace WordleGuesser
@@ -14,35 +11,33 @@ namespace WordleGuesser
     {
         string Word { get; set; }
 
-        List<string> ValidWords {get; set;}
+        List<string> ValidWords { get; set; }
 
         List<string> GuessedWord { get; set; }
 
-        List<RankedWord> rankedWords {  get; set; }
+        List<RankedWord> rankedWords { get; set; }
+
+        // Load and normalize the embedded word list once
+        private static readonly List<string> AllWords = Utilitys.GetEmbeddedTextResource("WordleWords.txt")
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim().ToLowerInvariant())
+            .Where(w => w.Length == 5)
+            .ToList();
 
         List<CharacterDictionary> CharacterDictionary { get; set; }
 
         public List<WordGuessResponse> FailedGuesses { get; set; } = new List<WordGuessResponse>();
-        
-        //saaes is the best letter for everything
-        // will not work because we will want to remove letters and find an actual word
-
-        //first guess should have all unique letters
-        //for ranking word for every letter location sumn the count and that is the words ranking
-        //we should remove words with duplicated letter for first and second guess
-        //also need to remove letter that are not in the word 
 
         public Guesser(string correctWord)
         {
             getWords();
-            var solved = false;
-            //FailedGuesses.Add(new WordGuessResponse(correctWord, "coals"));
-            //FailedGuesses.Add(new WordGuessResponse(correctWord, "niter"));
-            while (!solved) {
-               if(GuessWord(correctWord) == correctWord)
-                {
+            bool solved = false;
+
+            while (!solved)
+            {
+                string guess = GuessWord(correctWord);
+                if (guess == correctWord)
                     solved = true;
-                }
             }
         }
 
@@ -52,135 +47,127 @@ namespace WordleGuesser
             RemoveFailureWords();
             FillCharacterDictionary();
             RankWords();
-            var test = rankedWords.OrderByDescending(x => x.Ranking).ToList();
-            FailedGuesses.Add(new WordGuessResponse(correctWord, test.First().Word));
-            return test.First().Word;
+
+            var bestGuess = rankedWords.OrderByDescending(x => x.Ranking).FirstOrDefault();
+            if (bestGuess == null)
+                return "";
+
+            FailedGuesses.Add(new WordGuessResponse(correctWord, bestGuess.Word));
+            return bestGuess.Word;
         }
 
         public void getWords()
         {
-            ValidWords = new List<string>();
-
-            var wordList = Utilitys.GetEmbeddedTextResource("WordleWords.txt");
-
-            ValidWords = wordList.Split('\n').ToList();
-
+            // Copy full normalized list to working list
+            ValidWords = new List<string>(AllWords);
         }
-        
+
         public void RemoveFailureWords()
         {
-            List<string> words = new List<string>();
-            foreach(var word in ValidWords)
+            var requiredLetters = new HashSet<char>();
+            var forbiddenLetters = new HashSet<char>();
+            var positionConstraints = new char?[5];
+            var excludedPositions = new Dictionary<int, HashSet<char>>();
+
+            foreach (var fail in FailedGuesses)
             {
-                var validWord = true;
-                var Failed = false;
-                foreach(var fail in FailedGuesses)
+                for (int i = 0; i < 5; i++)
                 {
-                    
-                    for(int i = 0; i < 5; i++)
+                    char c = char.ToLowerInvariant(fail.Word[i]);
+                    switch (fail.Colors[i])
                     {
-                        
-                        //remove grey letters
-                        if (fail.Colors[i] == ResponseColor.grey) 
-                        {
-                            if (word.Contains(fail.Word[i]))
-                                Failed = true;
-                            
-                        }
-                        else if (fail.Colors[i] == ResponseColor.green)
-                        {
-                            if (word[i] != fail.Word[i])
-                                Failed = true;
-                        }
-                        else
-                        {
-                            if (word[i] != fail.Word[i] && word.Contains(fail.Word[i]))
-                                validWord = true;
-                            else
-                                Failed = true;
-                        }
-                        if (Failed)
-                        {
-                            validWord = false;
-                        }
+                        case ResponseColor.green:
+                            positionConstraints[i] = c;
+                            requiredLetters.Add(c);
+                            break;
+                        case ResponseColor.yellow:
+                            requiredLetters.Add(c);
+                            if (!excludedPositions.ContainsKey(i))
+                                excludedPositions[i] = new HashSet<char>();
+                            excludedPositions[i].Add(c);
+                            break;
+                        case ResponseColor.grey:
+                            forbiddenLetters.Add(c);
+                            break;
                     }
-                    if (!validWord)
-                        break;
-
-
                 }
-                if(validWord)
-                    words.Add(word);
             }
-            ValidWords = words;
+
+            ValidWords = ValidWords.Where(word =>
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    if (positionConstraints[i].HasValue && word[i] != positionConstraints[i].Value)
+                        return false;
+
+                    if (excludedPositions.TryGetValue(i, out var excluded) && excluded.Contains(word[i]))
+                        return false;
+                }
+
+                foreach (var f in forbiddenLetters)
+                    if (word.Contains(f) && !requiredLetters.Contains(f))
+                        return false;
+
+                foreach (var r in requiredLetters)
+                    if (!word.Contains(r))
+                        return false;
+
+                return true;
+            }).ToList();
         }
 
         public void FillCharacterDictionary()
         {
-            List<LetterLocation> list = new List<LetterLocation>();
-            foreach (var temp in ValidWords)
+            var counts = new Dictionary<(char letter, int position), int>();
+
+            foreach (var word in ValidWords)
             {
                 for (int i = 0; i < 5; i++)
                 {
-                    list.Add(new LetterLocation(temp[i], i));
+                    var key = (word[i], i);
+                    if (!counts.TryAdd(key, 1))
+                        counts[key]++;
                 }
             }
-            var comparer = new CharacterComparer();
-            CharacterDictionary = new List<CharacterDictionary>();
 
-            var m = list.Distinct(comparer).ToList();
-            foreach(var temp in list.Distinct(comparer))
-            {
-                CharacterDictionary.Add(new CharacterDictionary(
-                    temp.letter, 
-                    list.Where(t => t.letter == temp.letter && t.location == temp.location).Count(), 
-                    temp.location));
-            }
+            CharacterDictionary = counts
+                .Select(kv => new CharacterDictionary(kv.Key.letter, kv.Value, kv.Key.position))
+                .ToList();
         }
 
         public LetterLocation GetBestLetterLocation(int location)
         {
             var validLetters = CharacterDictionary.Where(t => t.Location == location);
-
             var letter = validLetters.OrderByDescending(t => t.Count).First();
-
             return new LetterLocation(letter.Character, location);
-        }
-        
-        public string GetBestWord()
-        {
-            
-
-            return "";
         }
 
         public void RankWords()
         {
-            rankedWords = new List<RankedWord>();
-            foreach(var word in ValidWords)
+            var charCount = CharacterDictionary
+                .GroupBy(cd => cd.Character)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(cd => cd.Count)
+                );
+
+            rankedWords = ValidWords.Select(word =>
             {
                 long rank = 0;
-                for(int i = 0; i < 5; i++)
-                {
-                    rank += CharacterDictionary.Where(t => t.Character == word[i]).FirstOrDefault().Count;
-                }
-                if(!IsWordUniqueChar(word))
-                    rank /= 2;
-                rankedWords.Add(new RankedWord(rank, word));
-            }
+                foreach (char c in word)
+                    if (charCount.TryGetValue(c, out long count))
+                        rank += count;
+
+                if (!IsWordUniqueChar(word))
+                    rank /= 2; // penalize duplicates
+
+                return new RankedWord(rank, word);
+            }).ToList();
         }
 
         public bool IsWordUniqueChar(string word)
         {
-
-            foreach(var letter in word)
-            {
-                if (word.Where(t => t == letter).Count() > 1)
-                    return false;
-            }    
-            
-            return true;
+            return word.Distinct().Count() == word.Length;
         }
-
     }
 }

@@ -91,7 +91,7 @@
         await stats.LoadAsync();
 
         StartNewGame();
-        
+
         // Restore previous game safely (stats.Guesses may be null)
         if (stats.LastPlayed.HasValue && stats.LastPlayed.Value.Date == DateTime.Today)
         {
@@ -101,7 +101,7 @@
                 .Concat(Enumerable.Repeat<WordGuessResponse?>(null, 6)) // pad to 6
                 .Take(6) // final length 6
                 .ToList();
-			OnGameCompleted.InvokeAsync(null); 
+            OnGameCompleted.InvokeAsync(null); 
         }
         CurrentRow = Guesses.Count(g => g != null); // continue after last guess
     }
@@ -183,7 +183,12 @@
     private void SubmitGuess()
     {
         StatusMessage = "";
-        if (CurrentGuess.Length != 5 || CurrentRow >= 6 || !Utilitys.IsWordInText(CurrentGuess, "WordleWords.txt")) return;
+        Console.WriteLine($"Submitting guess: {CurrentGuess}");
+        if (CurrentGuess.Length != 5 || CurrentRow >= 6 || !Utilitys.IsWordInText(CurrentGuess, "WordleWords.txt"))
+        {
+            return;
+        }
+
 
         var response = new WordGuessResponse(Solution, CurrentGuess);
         Guesses[CurrentRow] = response;

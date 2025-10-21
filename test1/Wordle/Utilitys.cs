@@ -37,13 +37,20 @@ namespace WordleGuesser
 
         public static bool IsWordInText(string word, string resourceName)
         {
-            var ValidWords = new List<string>();
+            // Read full file text
+            var wordList = GetEmbeddedTextResource(resourceName);
 
-            var wordList = Utilitys.GetEmbeddedTextResource(resourceName);
+            // Normalize all lines
+            var validWords = wordList
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => w.Trim().ToLowerInvariant())
+                .ToHashSet(); // faster lookups
 
-            ValidWords = wordList.Split('\n').ToList();
+            // Normalize input too
+            string normalizedWord = word.Trim().ToLowerInvariant();
 
-            return ValidWords.Contains(word);
+            return validWords.Contains(normalizedWord);
         }
+
     }
 }

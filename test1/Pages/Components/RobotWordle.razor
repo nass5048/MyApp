@@ -87,7 +87,7 @@
     {
         _ = AutoSolve(); // fire-and-forget
     }
- 
+
     private string IsHidden()
     {
         if (Hide)
@@ -190,6 +190,7 @@
         }
         catch (Exception ex)
         {
+
             StatusMessage = "AutoSolve failed: " + ex.Message;
             await InvokeAsync(StateHasChanged);
         }
