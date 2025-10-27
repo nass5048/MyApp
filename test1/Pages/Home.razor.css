@@ -9,7 +9,6 @@
 }
 
 body, .resume-page {
-    background: linear-gradient(180deg, #f6f7fb 0%, #ffffff 100%);
     display: flex;
     justify-content: center;
     padding: 32px;
